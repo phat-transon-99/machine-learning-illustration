@@ -1,0 +1,111 @@
+/* || HTML RESET */
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+	margin: 0;
+	padding: 0;
+	border: 0;
+    box-sizing: border-box;
+	font-size: 100%;
+	font: inherit;
+	vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+	display: block;
+}
+body {
+	line-height: 1;
+}
+ol, ul {
+	list-style: none;
+}
+blockquote, q {
+	quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+	content: '';
+	content: none;
+}
+table {
+	border-collapse: collapse;
+	border-spacing: 0;
+}
+
+/* || GENERAL STYLES  */
+/* USED FOR DEFAULT STYLING */
+body {
+    font-family: 'Charm', cursive;
+    font-size: 16px;
+    padding: 4rem;
+}
+
+html {
+    background-color: #FEFAE0;
+}
+
+h2 {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+
+p {
+    font-size: 1.5rem;
+    line-height: 3rem;
+    margin-bottom: 2rem;
+}
+
+/* || UTILITIES CLASS */
+/* USED FOR CLASS THAT WILL USED FOR MANY ELEMENT */
+.bold-text {
+    font-weight: bold;
+}
+
+/* || SITE WIDE */
+/* USED FOR ELEMENTS THAT WILL BE USED SITE-WISE: HEADER, NAV */
+header {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 5rem;
+}
+
+main {
+    display: grid;
+    grid-template-columns: 1fr 5fr;
+}
+
+.main-content {
+    padding: 0 2rem;
+}
+
+/* Side navigation */
+.side-nav {
+    font-size: 1.5rem;
+    height: 100%;
+    border-right: 1px solid #000;
+}
+
+.side-nav__item {
+    margin-right: 1rem;
+    margin-bottom: 3rem;
+}
+
+.side-nav__item a {
+    color: #000;
+    text-decoration: none;
+}
+
+/* || SPECIFICS */
+/* USED FOR SPECIFIC ELEMENTS */
