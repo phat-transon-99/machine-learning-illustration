@@ -73,6 +73,19 @@ p {
     font-weight: bold;
 }
 
+.button {
+    background-color: transparent;
+    border: 3px solid #000;
+    border-radius: 0;
+    cursor: pointer;
+    display: block;
+    font-family: 'Charm', cursive;
+    font-size: 1.2rem;
+    font-weight: bold;
+    padding: 0.5rem 1rem;
+    width: 100%;
+}
+
 /* || SITE WIDE */
 /* USED FOR ELEMENTS THAT WILL BE USED SITE-WISE: HEADER, NAV */
 header {
