@@ -12,9 +12,10 @@ LinearRegressionModel.prototype.clearDatapoints = function() {
     // Clear all the datapoint from the model
 }
 
-LinearRegressionModel.prototype.addDatapoints = function(datapoint) {
+LinearRegressionModel.prototype.addDatapoint = function(datapoint) {
     //Add a datapoint to the model
     //Datapoint is an object of { x: x coordinates, y: y coordinates }
+    this.datapoints.push(datapoint);
 }
 
 LinearRegressionModel.prototype.startFit = function() {
@@ -42,14 +43,14 @@ function LinearRegressionView(element, clearButton, trainButton, configuration) 
     this.configuration = configuration;
 }
 
-LinearRegressionView.prototype.render = function(datapoints, m, b) {
+LinearRegressionView.prototype.render = function(datapoints, line) {
     //Render the canvas and axes
     this.renderCanvas();
     this.renderAxes();
 
     //Render the graph, all the points and the line mx + b
     this.renderPoints(datapoints);
-    this.renderLine(m, b);
+    this.renderLine(line);
 }
 
 LinearRegressionView.prototype.renderCanvas = function() {
@@ -61,7 +62,7 @@ LinearRegressionView.prototype.renderCanvas = function() {
     var height = this.configuration.height;
 
     //Create SVG element
-    this.graph = d3.select(".graph__canvas")
+    this.graph = d3.select(this.root)
         .append("svg")
             .attr("width", width)
             .attr("height", height)
@@ -79,31 +80,77 @@ LinearRegressionView.prototype.renderAxes = function() {
     var height = this.configuration.height - margin * 2;
 
     //Create x and y scale
-    var scaleX = d3.scaleLinear()
+    this.scaleX = d3.scaleLinear()
         .domain([0, 10])
         .range([0, width]);
 
-    var scaleY = d3.scaleLinear()
+    this.invertScaleX = d3.scaleLinear()
+        .domain([0, width])
+        .range([0, 10]);
+
+    this.scaleY = d3.scaleLinear()
         .domain([0, 10])
         .range([height, 0])
+
+    this.invertScaleY = d3.scaleLinear()
+        .domain([height, 0])
+        .range([0, 10])
 
     //Draw the axes
     this.graph
         .append("g")
             .attr("transform", `translate(0, ${width})`)
-            .call(d3.axisBottom(scaleX));
+            .call(d3.axisBottom(this.scaleX));
 
     this.graph
         .append("g")
-            .call(d3.axisLeft(scaleY));
+            .call(d3.axisLeft(this.scaleY));
 }
+
+LinearRegressionView.prototype.renderPoint = function(datapoint) {
+    //Add a single datapoint to graph
+    //datapoint is an object of shape { x: ..., y: ... }
+
+    //Get x and y coordinate from graph
+    var { x, y } = datapoint;
+
+    //Draw datapoint
+    this.graph.append("circle")
+        .attr("cx", x)
+        .attr("cy", y)
+        .attr("r", 5)
+        .style("fill", "#000");
+}   
 
 LinearRegressionView.prototype.renderPoints = function(datapoints) {
     //Render all the data points on the graph
 }
 
-LinearRegressionView.prototype.renderLine = function(m, b) {
+LinearRegressionView.prototype.renderLine = function(line) {
     //Render the line y = mx + b on the graph
+    //line is an object of shape { m: ..., b: ... }
+
+    //Get m and b from line
+    var { m, b } = line;
+
+    //Initialize two coordinate pair {x1, y1} and {x2, y2}
+    var x1 = 0;
+    var y1 = m * x1 + b;
+    var x2 = 10;
+    var y2 = m * x2 + b;
+
+    //Draw convert to coordinates
+    var graphX1 = this.scaleX(x1), graphY1 = this.scaleY(y1);
+    var graphX2 = this.scaleX(x2), graphY2 = this.scaleY(y2);
+
+    //Draw the coordinates
+    this.graph.append("line")
+        .style("stroke", "#DDA15E")
+        .style("stroke-width", 2)
+        .attr("x1", graphX1)
+        .attr("y1", graphY1)
+        .attr("x2", graphX2)
+        .attr("y2", graphY2);
 }
 
 LinearRegressionView.prototype.bindClearDatapoints = function(onClearDatapoint) {
@@ -112,8 +159,36 @@ LinearRegressionView.prototype.bindClearDatapoints = function(onClearDatapoint) 
 }
 
 LinearRegressionView.prototype.bindAddDatapoint = function(onAddDatapoint) {
+    var margin = this.configuration.margin;
+    var view = this;
+
     //Bind the on add datapoint hook
-    this.onAddDatapoint = onAddDatapoint;
+    d3.select("svg").on("click", function(event) {
+        //event contains information of click
+        //Get coordinates from event
+        var coords = d3.pointer(event);
+        
+        //Subtract out the margin to get x and y coordinates
+        var x = coords[0] - margin;
+        var y = coords[1] - margin;
+
+        //x and y can be outside the graph (g element)'s domain
+        //so the coordinates need checking
+        if (x >= 0 && y >= 0) {
+            //Render point
+            view.renderPoint({ x, y });
+
+            //Convert to correct coordinates
+            var trueX = view.invertScaleX(x);
+            var trueY = view.invertScaleY(y);
+
+            //Call hook to pass coordinates
+            onAddDatapoint({
+                "x": trueX,
+                "y": trueY
+            });
+        }
+    });
 }
 
 LinearRegressionView.prototype.bindStartFit = function(onStartFit) {
@@ -128,20 +203,23 @@ function LinearRegressionController(model, view) {
     this.model = model;
     this.view = view;
 
+    //Render the view
+    this.view.render([], { m: 1, b: 0 });
+
     //Bind the model callbacks
 
     //Bind the view callbacks
-
-    //Render the view
-    this.view.render();
+    this.view.bindAddDatapoint(this.handleAddPoint.bind(this));
 }
 
 LinearRegressionController.prototype.handleClearPoints = function() {
     //Handle clear points button click
 }
 
-LinearRegressionController.prototype.handleAddPoint = function() {
+LinearRegressionController.prototype.handleAddPoint = function(datapoint) {
     //Handle add points mouse click
+    //datapoint is object of shape { x: ..., y: ... }
+    this.model.addDatapoint(datapoint);
 }
 
 LinearRegressionController.prototype.handleStartFit = function() {
@@ -162,7 +240,7 @@ Object.freeze(configuration);
 
 const app = (function() {
     //Create view, model and controller
-    var view = new LinearRegressionView(null, null, null, configuration);
+    var view = new LinearRegressionView(".graph__canvas", null, null, configuration);
     var model =  new LinearRegressionModel();
     var controller = new LinearRegressionController(model, view);
 
