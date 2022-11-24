@@ -1,7 +1,7 @@
 /* || GRAPH */
 .graph {
     display: grid;
-    grid-gap: 10px;
+    grid-gap: 20px;
     grid-template-columns: auto 1fr;
 }
 
