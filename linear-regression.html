@@ -13,6 +13,7 @@
 
     <!--STYLES-->
     <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="styles/linear-regression.css"
 </head>
 <body>
     <!--HEADER SECTION-->
@@ -59,10 +60,22 @@
                     Please enjoy!
                 </p>
             </article>
+
+            <!--GRAPH SECTION-->
+            <article class="graph">
+                <div class="graph__canvas"></div>
+                <div class="graph__buttons">
+                    <button class="graph__button button">Clear all points</button>
+                    <button class="graph__button button">Start fitting</button>
+                </div>
+            </article>
         </div>
     </main>
 
-    <!--SCRIPTS-->
-    <script src="scripts/index.js"></script>
+    <!--D3JS SCRIPT-->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!--OWN SCRIPTS-->
+    <script src="scripts/linear-regression.js"></script>
 </body>
 </html>
