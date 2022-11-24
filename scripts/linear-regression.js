@@ -64,8 +64,10 @@ LinearRegressionView.prototype.renderCanvas = function() {
     //Create SVG element
     this.graph = d3.select(this.root)
         .append("svg")
-            .attr("width", width)
-            .attr("height", height)
+            .attr("width", '100%')
+            .attr("height", '100%')
+            .attr("preserveAspectRatio", "xMidYMid meet")
+            .attr("viewBox", `0 0 ${width} ${height}`)
             .style("background-color", "#FFF")
         .append("g")
             .attr("transform", `translate(${margin}, ${margin})`);
