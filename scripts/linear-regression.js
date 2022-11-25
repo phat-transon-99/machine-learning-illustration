@@ -6,6 +6,30 @@ function LinearRegressionModel() {
     //Set up the parameter in y = mx + b (m and b)
     this.m = 0;
     this.b = 0;
+
+    //Create linear regression model
+
+    //Start by creating the layer
+    this.layers_definition = [
+        { type: "input", out_sx: 1, out_sy: 1, out_depth: 1 },
+        { type: "fc", num_neurons: 1 }, //No activation
+        { type: "regression", num_neurons: 1 }
+    ]
+
+    //Create network
+    this.network = new convnetjs.Net();
+    this.network.makeLayers(this.layers_definition);
+
+    //Create trainer
+    this.trainer = new convnetjs.SGDTrainer(
+        this.network,
+        {
+            learning_rate: 0.1,
+            momentum: 0.1,
+            batch_size: 10,
+            l2_decay: 0.001
+        }
+    )
 }
 
 LinearRegressionModel.prototype.clearDatapoints = function() {
@@ -20,9 +44,44 @@ LinearRegressionModel.prototype.addDatapoint = function(datapoint) {
     this.datapoints.push(datapoint);
 }
 
+LinearRegressionModel.prototype.predict = function(datapoint) {
+    //Predict an output for a particular input
+    //datapoint is an input of shape { x: ... }
+    var { x } = datapoint;
+    var volX = new convnetjs.Vol(1, 1, 1, 0.0);
+    volX.w[0] = x / 10;
+
+    //Forward to get value of y
+   var volY = this.network.forward(volX);
+   var y = volY.w[0] * 10
+
+   //Return an object of shape { x: ..., y: ... }
+   return { x, y };
+}
+
 LinearRegressionModel.prototype.startFit = function() {
     //Start fitting the line
-    //Call onFitIteration somewhere in the loop
+
+    //Define a training function
+    var model = this;
+
+    function train() {
+        //Train over all examples        
+        for (var i = 0; i != model.datapoints.length; ++i) {
+            //Create a volume and assign to it the value of x
+            var input = new convnetjs.Vol(1, 1, 1, 0.0);
+            input.w[0] = model.datapoints[i].x / 10;
+
+            //Train based on the value of y
+            model.trainer.train(input, [model.datapoints[i].y / 10]);
+        }
+
+        //Call onFitIteration
+        model.onFitIteration();
+    }
+
+    //Use setInterval to train the network many loops
+    var intervalId = setInterval(train, 100);
 }
 
 LinearRegressionModel.prototype.bindFitIteration = function(onFitIteration) {
@@ -45,13 +104,10 @@ function LinearRegressionView(element, clearButton, trainButton, configuration) 
     this.configuration = configuration;
 }
 
-LinearRegressionView.prototype.render = function(datapoints, line) {
+LinearRegressionView.prototype.render = function() {
     //Render the canvas and axes
     this.renderCanvas();
     this.renderAxes();
-
-    //Render the graph, all the points and the line mx + b
-    this.renderLine(line);
 }
 
 LinearRegressionView.prototype.renderCanvas = function() {
@@ -131,18 +187,11 @@ LinearRegressionView.prototype.clearPoints = function() {
         .remove()
 }
 
-LinearRegressionView.prototype.renderLine = function(line) {
-    //Render the line y = mx + b on the graph
-    //line is an object of shape { m: ..., b: ... }
-
-    //Get m and b from line
-    var { m, b } = line;
-
-    //Initialize two coordinate pair {x1, y1} and {x2, y2}
-    var x1 = 0;
-    var y1 = m * x1 + b;
-    var x2 = 10;
-    var y2 = m * x2 + b;
+LinearRegressionView.prototype.renderLine = function(firstDatapoint, secondDatapoint) {
+    //firstDatapoint is an object of shape { x:..., y:... }
+    //secondDatapoint is an object of shape { x:..., y:... }
+    var x1 = firstDatapoint.x, y1 = firstDatapoint.y;
+    var x2 = secondDatapoint.x, y2 = secondDatapoint.y;
 
     //Draw convert to coordinates
     var graphX1 = this.scaleX(x1), graphY1 = this.scaleY(y1);
@@ -156,6 +205,12 @@ LinearRegressionView.prototype.renderLine = function(line) {
         .attr("y1", graphY1)
         .attr("x2", graphX2)
         .attr("y2", graphY2);
+}
+
+LinearRegressionView.prototype.clearLine = function() {
+    //Remove current line
+    this.graph.selectAll("line")
+        .remove();
 }
 
 LinearRegressionView.prototype.bindClearDatapoints = function(onClearDatapoints) {
@@ -221,10 +276,12 @@ function LinearRegressionController(model, view) {
     this.view.render([], { m: 1, b: 0 });
 
     //Bind the model callbacks
+    this.model.bindFitIteration(this.handleFit.bind(this));
 
     //Bind the view callbacks
     this.view.bindAddDatapoint(this.handleAddPoint.bind(this));
     this.view.bindClearDatapoints(this.handleClearPoints.bind(this));
+    this.view.bindStartFit(this.handleStartFit.bind(this));
 }
 
 LinearRegressionController.prototype.handleClearPoints = function() {
@@ -241,10 +298,19 @@ LinearRegressionController.prototype.handleAddPoint = function(datapoint) {
 
 LinearRegressionController.prototype.handleStartFit = function() {
     //Handle start fit button click
+    this.model.startFit();
 }
 
 LinearRegressionController.prototype.handleFit = function() {
     //Handle fit iteration
+    
+    //Create two datapoint { x1, y1 } and { x2, y2 }
+    var firstDatapoint = this.model.predict({ x: 0 });
+    var secondDatapoint = this.model.predict({ x: 10 });
+    
+    //Draw the line
+    this.view.clearLine();
+    this.view.renderLine(firstDatapoint, secondDatapoint);
 }
 
 //Initialize application
