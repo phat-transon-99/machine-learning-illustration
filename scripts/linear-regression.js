@@ -1,6 +1,6 @@
 /* Applying the MVC model in Linear Regression chart */
 function LinearRegressionModel() {
-    // Set up the datapoint list (containing the x and y coordinates)
+    //Set up the datapoint list (containing the x and y coordinates)
     this.datapoints = []
 
     //Set up the parameter in y = mx + b (m and b)
@@ -9,7 +9,9 @@ function LinearRegressionModel() {
 }
 
 LinearRegressionModel.prototype.clearDatapoints = function() {
-    // Clear all the datapoint from the model
+    //Clear all the datapoint from the model
+    //Assigning datapoints to new empty array
+    this.datapoints = [];
 }
 
 LinearRegressionModel.prototype.addDatapoint = function(datapoint) {
@@ -49,7 +51,6 @@ LinearRegressionView.prototype.render = function(datapoints, line) {
     this.renderAxes();
 
     //Render the graph, all the points and the line mx + b
-    this.renderPoints(datapoints);
     this.renderLine(line);
 }
 
@@ -124,8 +125,10 @@ LinearRegressionView.prototype.renderPoint = function(datapoint) {
         .style("fill", "#000");
 }   
 
-LinearRegressionView.prototype.renderPoints = function(datapoints) {
-    //Render all the data points on the graph
+LinearRegressionView.prototype.clearPoints = function() {
+    //Clear all points from the graph
+    this.graph.selectAll("circle")
+        .remove()
 }
 
 LinearRegressionView.prototype.renderLine = function(line) {
@@ -155,9 +158,16 @@ LinearRegressionView.prototype.renderLine = function(line) {
         .attr("y2", graphY2);
 }
 
-LinearRegressionView.prototype.bindClearDatapoints = function(onClearDatapoint) {
+LinearRegressionView.prototype.bindClearDatapoints = function(onClearDatapoints) {
+    var view = this;
+
     //Bind the on clear datapoint hook
-    this.onClearDatapoint = onClearDatapoint;
+    d3.select(this.clearButton).on("click", function(event) {
+        view.clearPoints();
+    });
+
+    //Call clear point hook
+    onClearDatapoints();
 }
 
 LinearRegressionView.prototype.bindAddDatapoint = function(onAddDatapoint) {
@@ -212,10 +222,13 @@ function LinearRegressionController(model, view) {
 
     //Bind the view callbacks
     this.view.bindAddDatapoint(this.handleAddPoint.bind(this));
+    this.view.bindClearDatapoints(this.handleClearPoints.bind(this));
 }
 
 LinearRegressionController.prototype.handleClearPoints = function() {
     //Handle clear points button click
+    //Clear all datapoints from the model
+    this.model.clearDatapoints();
 }
 
 LinearRegressionController.prototype.handleAddPoint = function(datapoint) {
@@ -242,7 +255,7 @@ Object.freeze(configuration);
 
 const app = (function() {
     //Create view, model and controller
-    var view = new LinearRegressionView(".graph__canvas", null, null, configuration);
+    var view = new LinearRegressionView(".graph__canvas", "#clear-points-button", "#start-fitting-button", configuration);
     var model =  new LinearRegressionModel();
     var controller = new LinearRegressionController(model, view);
 
