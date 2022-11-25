@@ -204,8 +204,10 @@ LinearRegressionView.prototype.bindAddDatapoint = function(onAddDatapoint) {
 }
 
 LinearRegressionView.prototype.bindStartFit = function(onStartFit) {
-    //Bind the on start fir hook
-    this.onStartFit = onStartFit;
+    //Bind the on start fitting hook
+    d3.select(this.trainButton).on("click", function(event) {
+        onStartFit();
+    });
 }
 
 
