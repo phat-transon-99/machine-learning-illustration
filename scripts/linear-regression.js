@@ -81,7 +81,7 @@ LinearRegressionModel.prototype.startFit = function() {
     }
 
     //Use setInterval to train the network many loops
-    var intervalId = setInterval(train, 100);
+    setInterval(train, 100);
 }
 
 LinearRegressionModel.prototype.bindFitIteration = function(onFitIteration) {
@@ -99,6 +99,9 @@ function LinearRegressionView(element, clearButton, trainButton, configuration) 
     //Set the two buttons to clear datapoint and start training
     this.clearButton = clearButton;
     this.trainButton = trainButton;
+
+    //Enable buttons on start
+    this.areButtonsDisabled = false;
 
     //Configuration object: { width: ..., height: ..., margin: ... }
     this.configuration = configuration;
@@ -218,11 +221,11 @@ LinearRegressionView.prototype.bindClearDatapoints = function(onClearDatapoints)
 
     //Bind the on clear datapoint hook
     d3.select(this.clearButton).on("click", function(event) {
-        view.clearPoints();
+        if (!view.areButtonsDisabled) {
+            view.clearPoints();
+            onClearDatapoints();
+        }
     });
-
-    //Call clear point hook
-    onClearDatapoints();
 }
 
 LinearRegressionView.prototype.bindAddDatapoint = function(onAddDatapoint) {
@@ -231,38 +234,61 @@ LinearRegressionView.prototype.bindAddDatapoint = function(onAddDatapoint) {
 
     //Bind the on add datapoint hook
     d3.select("svg").on("click", function(event) {
-        //event contains information of click
-        //Get coordinates from event
-        var coords = d3.pointer(event);
-        
-        //Subtract out the margin to get x and y coordinates
-        var x = coords[0] - margin;
-        var y = coords[1] - margin;
+        //Add datapoint if the button are not disabled
+        if (!view.areButtonsDisabled) {
+            //event contains information of click
+            //Get coordinates from event
+            var coords = d3.pointer(event);
+            
+            //Subtract out the margin to get x and y coordinates
+            var x = coords[0] - margin;
+            var y = coords[1] - margin;
 
-        //x and y can be outside the graph (g element)'s domain
-        //so the coordinates need checking
-        if (x >= 0 && y >= 0) {
-            //Render point
-            view.renderPoint({ x, y });
+            //x and y can be outside the graph (g element)'s domain
+            //so the coordinates need checking
+            if (x >= 0 && y >= 0) {
+                //Render point
+                view.renderPoint({ x, y });
 
-            //Convert to correct coordinates
-            var trueX = view.invertScaleX(x);
-            var trueY = view.invertScaleY(y);
+                //Convert to correct coordinates
+                var trueX = view.invertScaleX(x);
+                var trueY = view.invertScaleY(y);
 
-            //Call hook to pass coordinates
-            onAddDatapoint({
-                "x": trueX,
-                "y": trueY
-            });
+                //Call hook to pass coordinates
+                onAddDatapoint({
+                    "x": trueX,
+                    "y": trueY
+                });
+            }
         }
     });
 }
 
 LinearRegressionView.prototype.bindStartFit = function(onStartFit) {
     //Bind the on start fitting hook
+    var view = this;
+
     d3.select(this.trainButton).on("click", function(event) {
-        onStartFit();
+        if (!view.areButtonsDisabled) {
+            onStartFit();
+        }
     });
+}
+
+LinearRegressionView.prototype.disableButtons = function() {
+    //Set disabled button to true
+    this.areButtonsDisabled = true;
+
+    //Add disabled class to clear button and start fit button
+    d3.select(this.clearButton)
+        .node()
+        .classList
+        .add("button--disabled");
+
+    d3.select(this.trainButton)
+        .node()
+        .classList
+        .add("button--disabled");
 }
 
 
@@ -299,6 +325,9 @@ LinearRegressionController.prototype.handleAddPoint = function(datapoint) {
 LinearRegressionController.prototype.handleStartFit = function() {
     //Handle start fit button click
     this.model.startFit();
+
+    //Disabled add button and start fit button
+    this.view.disableButtons();
 }
 
 LinearRegressionController.prototype.handleFit = function() {
