@@ -86,6 +86,11 @@ p {
     width: 100%;
 }
 
+.button--disabled {
+    opacity: 0.5;
+    cursor: no-drop;
+}
+
 /* || SITE WIDE */
 /* USED FOR ELEMENTS THAT WILL BE USED SITE-WISE: HEADER, NAV */
 header {
