@@ -59,6 +59,27 @@ LinearRegressionModel.prototype.predict = function(datapoint) {
    return { x, y };
 }
 
+LinearRegressionModel.prototype.calculateScore = function() {
+    //Calculate the score of the training dataset
+    var score = 0.0;
+
+    //Go through each example, calculate the score for each example
+    for (var i = 0; i != this.datapoints.length; ++i) {
+        //Create a volume and assign to it the value of x
+        var input = new convnetjs.Vol(1, 1, 1, 0.0);
+        input.w[0] = this.datapoints[i].x / 10;
+
+        //Get the output
+        var output = this.network.forward(input);
+        var yHat = output.w[0];
+
+        //Train based on the value of y
+        score += Math.pow(yHat - (this.datapoints[i].y / 10), 2);
+    }
+
+    return score / this.datapoints.length;
+}
+
 LinearRegressionModel.prototype.startFit = function() {
     //Start fitting the line
 
@@ -111,6 +132,8 @@ LinearRegressionView.prototype.render = function() {
     //Render the canvas and axes
     this.renderCanvas();
     this.renderAxes();
+    this.renderLine();
+    this.renderScore();
 }
 
 LinearRegressionView.prototype.renderCanvas = function() {
@@ -190,7 +213,7 @@ LinearRegressionView.prototype.clearPoints = function() {
         .remove()
 }
 
-LinearRegressionView.prototype.renderLine = function(firstDatapoint, secondDatapoint) {
+LinearRegressionView.prototype.renderLine = function(firstDatapoint = { x: 0, y: 0 }, secondDatapoint = { x: 10, y: 10 }) {
     //firstDatapoint is an object of shape { x:..., y:... }
     //secondDatapoint is an object of shape { x:..., y:... }
     var x1 = firstDatapoint.x, y1 = firstDatapoint.y;
@@ -201,7 +224,7 @@ LinearRegressionView.prototype.renderLine = function(firstDatapoint, secondDatap
     var graphX2 = this.scaleX(x2), graphY2 = this.scaleY(y2);
 
     //Draw the coordinates
-    this.graph.append("line")
+    this.regressionLine = this.graph.append("line")
         .style("stroke", "#DDA15E")
         .style("stroke-width", 2)
         .attr("x1", graphX1)
@@ -212,8 +235,26 @@ LinearRegressionView.prototype.renderLine = function(firstDatapoint, secondDatap
 
 LinearRegressionView.prototype.clearLine = function() {
     //Remove current line
-    this.graph.selectAll("line")
-        .remove();
+    this.regressionLine.remove();
+}
+
+LinearRegressionView.prototype.renderScore = function(score = 0) {
+    //Render score onto the graph
+    //Score is a floating point number
+    this.text = d3.select(this.root)
+        .select("svg")
+        .append("g");
+
+    this.text.append("text")
+            .attr("class", "score-text")
+            .attr("x", 180)
+            .attr("y", 25)
+            .text(`Current score: ${score}`);
+}
+
+LinearRegressionView.prototype.clearScore = function() {
+    //Clear the current score from graph
+    this.text.remove();
 }
 
 LinearRegressionView.prototype.bindClearDatapoints = function(onClearDatapoints) {
@@ -299,7 +340,7 @@ function LinearRegressionController(model, view) {
     this.view = view;
 
     //Render the view
-    this.view.render([], { m: 1, b: 0 });
+    this.view.render();
 
     //Bind the model callbacks
     this.model.bindFitIteration(this.handleFit.bind(this));
@@ -336,10 +377,15 @@ LinearRegressionController.prototype.handleFit = function() {
     //Create two datapoint { x1, y1 } and { x2, y2 }
     var firstDatapoint = this.model.predict({ x: 0 });
     var secondDatapoint = this.model.predict({ x: 10 });
+    var score = this.model.calculateScore();
     
     //Draw the line
     this.view.clearLine();
     this.view.renderLine(firstDatapoint, secondDatapoint);
+
+    //Draw the score
+    this.view.clearScore();
+    this.view.renderScore(score);
 }
 
 //Initialize application
