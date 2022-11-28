@@ -3,12 +3,42 @@
 
 //Logistic regression model
 function LogisticRegressionModel() {
+    //Cache a list of datapoints to train on
+    this.datapoints = [];
 
+    //Define logistic regression layers
+    this.layers_definition = [
+        { type: "input", out_sx: 1, out_sy: 1, out_depth: 1 },
+        { type: "fc", num_neurons: 1, activation: "sigmoid" }, //Sigmoid activation
+    ]
+
+    //Create logistic regresion model
+    this.network = new convnetjs.Net();
+    this.network.makeLayers(this.layers_definition);
+
+    //Create trainer
+    this.trainer = new convnetjs.SGDTrainer(
+        this.network,
+        {
+            learning_rate: 0.1,
+            momentum: 0.1,
+            batch_size: 10,
+            l2_decay: 0.001
+        }
+    )
 }
 
 LogisticRegressionModel.prototype.onAddDatapoint = function(datapoint) {
     //On adding new datapoint to the dataset
     //datapoint is an object of shape { x:..., y:..., class:... }
+    this.datapoints.push(datapoint);
+}
+
+LogisticRegressionModel.prototype.clearDatapoints = function() {
+    //Clear all ddatapoints from the model
+
+    //Set the datapoint cache to a new empty list
+    this.datapoints = [];
 }
 
 
@@ -43,6 +73,7 @@ LogisticRegressionView.prototype.render = function() {
     //Render canvas and axes
     this.renderCanvas();
     this.renderAxes();
+    this.renderMask();
 }
 
 LogisticRegressionView.prototype.renderCanvas = function() {
@@ -116,6 +147,41 @@ LogisticRegressionView.prototype.renderPoint = function(datapoint) {
         .style("fill", classLabel === 0 ? "#EF233C" : "#70E000");
 }
 
+LogisticRegressionView.prototype.clearDatapoints = function() {
+    //Remove all circles from the graph
+    this.graph.selectAll("circle")
+        .remove();
+}
+
+LogisticRegressionView.prototype.renderMask = function() {
+    //Render a transparent that tells what class a single datapoint is
+
+    //Get the width, height of graph, and the mask size from configuration
+    var margin = this.configuration.margin;
+    var width = this.configuration.width - margin * 2;
+    var height = this.configuration.height - margin * 2;
+    var mask = this.configuration.mask;
+
+    //Render a transparent mask by drawing rectangle with opacity
+    for (var r = 0; r < height / mask; ++r) {
+        for (var c = 0; c < width / mask; ++c) {
+            //Get the current position of the rectangle
+            var currentHeight = r * mask;
+            var currentWidth = c * mask;
+
+            //Draw a rectangle
+            this.graph.append("rect")
+                .attr("x", currentWidth)
+                .attr("y", currentHeight)
+                .attr("width", mask)
+                .attr("height", mask)
+                .attr("stroke", "transparent")
+                .attr("fill", "#70E000")
+                .style("opacity", 0.25);
+        }
+    }
+}
+
 LogisticRegressionView.prototype.changeClass = function(classLabel) {
     //Change the current class of datapoint
     //classlabel can be 0 - Red class
@@ -184,6 +250,20 @@ LogisticRegressionView.prototype.bindOnAddDatapoint = function(onAddDatapoint) {
     });
 }
 
+LogisticRegressionView.prototype.bindOnClearDatapoints = function(onClearDatapoints) {
+    //Bind on clear datapoints hook
+
+    //Set the view to this
+    var view = this;
+
+    d3.select(this.clearButton)
+        .on("click", function() {
+            //Call clear datapoints on view
+            view.clearDatapoints();
+            onClearDatapoints();
+        });
+}
+
 
 //Logistic regression controller
 function LogisticRegressionController(model, view) {
@@ -198,6 +278,7 @@ function LogisticRegressionController(model, view) {
     this.view.bindOnChangeClassToRed();
     this.view.bindOnChangeClassToGreen();
     this.view.bindOnAddDatapoint(this.handleAddDatapoint.bind(this));
+    this.view.bindOnClearDatapoints(this.handleClearDatapoints.bind(this));
 }
 
 LogisticRegressionController.prototype.handleAddDatapoint = function(datapoint) {
@@ -207,11 +288,18 @@ LogisticRegressionController.prototype.handleAddDatapoint = function(datapoint) 
     this.model.onAddDatapoint(datapoint);
 }
 
+LogisticRegressionController.prototype.handleClearDatapoints = function() {
+    //Handle clear datapoints
+
+    this.model.clearDatapoints();
+}
+
 //Configuration and app
 var configuration = {
     width: 600,
     height: 600,
-    margin: 50
+    margin: 50,
+    mask: 25
 }
 Object.freeze(configuration);
 
