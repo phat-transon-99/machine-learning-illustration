@@ -59,27 +59,6 @@ LinearRegressionModel.prototype.predict = function(datapoint) {
    return { x, y };
 }
 
-LinearRegressionModel.prototype.calculateScore = function() {
-    //Calculate the score of the training dataset
-    var score = 0.0;
-
-    //Go through each example, calculate the score for each example
-    for (var i = 0; i != this.datapoints.length; ++i) {
-        //Create a volume and assign to it the value of x
-        var input = new convnetjs.Vol(1, 1, 1, 0.0);
-        input.w[0] = this.datapoints[i].x / 10;
-
-        //Get the output
-        var output = this.network.forward(input);
-        var yHat = output.w[0];
-
-        //Train based on the value of y
-        score += Math.pow(yHat - (this.datapoints[i].y / 10), 2);
-    }
-
-    return score / this.datapoints.length;
-}
-
 LinearRegressionModel.prototype.startFit = function() {
     //Start fitting the line
 
@@ -87,6 +66,9 @@ LinearRegressionModel.prototype.startFit = function() {
     var model = this;
 
     function train() {
+        //Initialize a loss
+        var loss = 0;
+
         //Train over all examples        
         for (var i = 0; i != model.datapoints.length; ++i) {
             //Create a volume and assign to it the value of x
@@ -94,11 +76,15 @@ LinearRegressionModel.prototype.startFit = function() {
             input.w[0] = model.datapoints[i].x / 10;
 
             //Train based on the value of y
-            model.trainer.train(input, [model.datapoints[i].y / 10]);
+            //Stats holds training information, also contains the loss
+            var stats = model.trainer.train(input, [model.datapoints[i].y / 10]);
+
+            //Add loss to total loss
+            loss += stats.loss;
         }
 
-        //Call onFitIteration
-        model.onFitIteration();
+        //Call onFitIteration on the average loss
+        model.onFitIteration(loss / model.datapoints.length);
     }
 
     //Use setInterval to train the network many loops
@@ -107,7 +93,8 @@ LinearRegressionModel.prototype.startFit = function() {
 
 LinearRegressionModel.prototype.bindFitIteration = function(onFitIteration) {
     //Bind the on fit iteration hook
-    //onTrainIteration is a function of type function(m, b) where m, b are updated parameters for the line
+    //onTrainIteration is a function of type function(loss) where loss is the current loss of the training
+    //iteration
     this.onFitIteration = onFitIteration;
 }
 
@@ -371,13 +358,12 @@ LinearRegressionController.prototype.handleStartFit = function() {
     this.view.disableButtons();
 }
 
-LinearRegressionController.prototype.handleFit = function() {
+LinearRegressionController.prototype.handleFit = function(loss) {
     //Handle fit iteration
     
     //Create two datapoint { x1, y1 } and { x2, y2 }
     var firstDatapoint = this.model.predict({ x: 0 });
     var secondDatapoint = this.model.predict({ x: 10 });
-    var score = this.model.calculateScore();
     
     //Draw the line
     this.view.clearLine();
@@ -385,7 +371,7 @@ LinearRegressionController.prototype.handleFit = function() {
 
     //Draw the score
     this.view.clearScore();
-    this.view.renderScore(score);
+    this.view.renderScore(loss);
 }
 
 //Initialize application
