@@ -1,0 +1,29 @@
+/* || GRAPH */
+.graph {
+    display: grid;
+    grid-gap: 20px;
+    grid-template-rows: 1fr auto;
+    grid-template-columns: 3fr 2fr;
+}
+
+.graph__horizontal-buttons {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    grid-row-start: 1;
+    grid-row-end: 2;
+    grid-column-start: 1;
+    grid-column-end: 3;
+}
+
+.graph__canvas {
+    
+}
+
+.graph__buttons {
+    
+}
+
+.graph__button {
+    margin-bottom: 1rem;
+}

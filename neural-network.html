@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Machine Learning Illustrated</title>
+
+    <!--GOOGLE FONTS-->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Charm:wght@400;700&display=swap" rel="stylesheet"> 
+
+    <!--STYLES-->
+    <link rel="stylesheet" href="styles/styles.css">
+    <link rel="stylesheet" href="styles/neural-network.css">
+</head>
+<body>
+    <!--HEADER SECTION-->
+    <header>
+        <h1>Machine Learning Illustration</h1>
+    </header>
+
+    <!-- MAIN BODY-->
+    <main>
+        <!--SIDE NAVIGATION-->
+        <aside>
+            <ul class="side-nav">
+                <li class="side-nav__item">
+                    <a href="./index.html">About</a>
+                </li>
+
+                <li class="side-nav__item">
+                    <a href="./linear-regression.html">Linear regression</a>
+                </li>
+
+                <li class="side-nav__item">
+                    <a href="./logistic-regression.html">Logistic regression</a>
+                </li>
+
+                <li class="side-nav__item bold-text">
+                    <a href="./neural-network.html">Neural network</a>
+                </li>
+            </ul>
+        </aside>
+
+        <!-- CONTENT-->
+        <div class="main-content">
+            <!--INTRODUCTION SECTION-->
+            <article>
+                <h2 class="bold-text">Neural Network</h2>
+
+                <p>
+                    Neural Network is a more advanced algorithm that mimics the way a human’s brain works. 
+                    It lies at the heart of the deep learning field, and can be used to output either a real or a categorical value.
+                </p>
+
+                <p>
+                    In the illustration below, you can click on any coordinates to add a point to the dataset, click ‘Reset’ to clear all the datapoints, and click on the ‘Fit’ button to start fitting the neural network. 
+                </p>
+                
+                <p>
+                    You can also choose a class of a specific point by choosing appropriate buttons. 
+                    Finally, you may select the architecture of the network for more accurate predictions.
+                </p>
+            </article>
+
+            <!--GRAPH SECTION-->
+            <article class="graph">
+                <div class="graph__horizontal-buttons">
+                    <button class="graph__button button one-third-width" id="1-layer-button">1 Fully-connected layers</button>
+                    <button class="graph__button button one-third-width" id="2-layer-button">2 Fully-connected layers</button>
+                    <button class="graph__button button one-third-width" id="3-layer-button">3 Fully-connected layers</button>
+                </div>
+                <div class="graph__canvas"></div>
+                <div class="graph__buttons">
+                    <button class="graph__button button full-width" id="clear-points-button">Clear all points</button>
+                    <button class="graph__button button full-width" id="start-fitting-button">Start fitting</button>
+                    <button class="graph__button button full-width" id="select-green-button">Select 'Green' class</button>
+                    <button class="graph__button button full-width" id="select-red-button">Select 'Red' class</button>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <!--D3JS SCRIPT-->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+
+    <!--CONVNET SCRIPT-->
+    <script src="scripts/convnet-min.js"></script>
+
+    <!--OWN SCRIPTS-->
+    <script src="scripts/neural-network.js"></script>
+</body>
+</html>
