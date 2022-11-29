@@ -73,6 +73,9 @@ LogisticRegressionModel.prototype.startFit = function() {
     var model = this;
 
     function train() {
+        //Initialize the average cost
+        var loss = 0;
+
         //Train over all examples        
         for (var i = 0; i != model.datapoints.length; ++i) {
             //Create a volume and assign to it the value of x
@@ -81,11 +84,15 @@ LogisticRegressionModel.prototype.startFit = function() {
             input.w[1] = model.datapoints[i].y;
 
             //Train based on the value of y
-            model.trainer.train(input, model.datapoints[i].class);
+            //stats holds the current cost of this iteration
+            var stats = model.trainer.train(input, model.datapoints[i].class);
+
+            //Add to average costs
+            loss += stats.loss;
         }
 
-        //Call onFitIteration
-        model.onFitIteration();
+        //Call onFitIteration, pass in the average cost of the current iteration
+        model.onFitIteration(loss / model.datapoints.length);
     }
 
     //Use setInterval to train the network many loops
@@ -94,6 +101,7 @@ LogisticRegressionModel.prototype.startFit = function() {
 
 LogisticRegressionModel.prototype.bindOnFitIteration = function(onFitIteration) {
     //Bind the on fit iteration hook
+    //onFitIteration is a function of type function(loss)
     this.onFitIteration = onFitIteration;
 }
 
@@ -132,6 +140,7 @@ LogisticRegressionView.prototype.render = function() {
     //Render canvas and axes
     this.renderCanvas();
     this.renderAxes();
+    this.renderScore();
 }
 
 LogisticRegressionView.prototype.renderCanvas = function() {
@@ -411,6 +420,25 @@ LogisticRegressionView.prototype.disableButtons = function() {
         .add("button--disabled");  
 }
 
+LogisticRegressionView.prototype.renderScore = function(score = 0) {
+    //Render score onto the graph
+    //Score is a floating point number
+    this.text = d3.select(this.root)
+        .select("svg")
+        .append("g");
+
+    this.text.append("text")
+            .attr("class", "score-text")
+            .attr("x", 180)
+            .attr("y", 25)
+            .text(`Current score: ${score}`);
+}
+
+LogisticRegressionView.prototype.clearScore = function() {
+    //Clear the current score from graph
+    this.text.remove();
+}
+
 //Logistic regression controller
 function LogisticRegressionController(model, view) {
     //Set model and view
@@ -450,7 +478,7 @@ LogisticRegressionController.prototype.handleStartFit = function() {
     this.view.disableButtons();
 }
 
-LogisticRegressionController.prototype.handleFitIteration = function() {
+LogisticRegressionController.prototype.handleFitIteration = function(loss) {
     //Handle each iteration
 
     //Get the prediction of datapoints
@@ -460,6 +488,10 @@ LogisticRegressionController.prototype.handleFitIteration = function() {
     //Draw the mask according to the labels
     this.view.clearMask();
     this.view.renderMask(labels);
+
+    //Render the score
+    this.view.clearScore();
+    this.view.renderScore(loss);
 }
 
 //Configuration and app
