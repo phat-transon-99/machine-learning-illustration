@@ -8,8 +8,9 @@ function LogisticRegressionModel() {
 
     //Define logistic regression layers
     this.layers_definition = [
-        { type: "input", out_sx: 1, out_sy: 1, out_depth: 1 },
-        { type: "fc", num_neurons: 1, activation: "sigmoid" }, //Sigmoid activation
+        { type: "input", out_sx: 1, out_sy: 1, out_depth: 2 },
+        { type: "fc", num_neurons: 2, activation: "tanh" }, //No activation
+        { type:"softmax", num_classes: 2 }
     ]
 
     //Create logistic regresion model
@@ -23,7 +24,7 @@ function LogisticRegressionModel() {
             learning_rate: 0.1,
             momentum: 0.1,
             batch_size: 10,
-            l2_decay: 0.001
+            l2_decay: 0.01
         }
     )
 }
@@ -36,9 +37,64 @@ LogisticRegressionModel.prototype.onAddDatapoint = function(datapoint) {
 
 LogisticRegressionModel.prototype.clearDatapoints = function() {
     //Clear all ddatapoints from the model
-
     //Set the datapoint cache to a new empty list
     this.datapoints = [];
+}
+
+LogisticRegressionModel.prototype.predict = function(datapoints) {
+    //Predict an output for an input array
+    //datapoint is an input array of shape [{ x: ..., y:... }]
+    //labels is an input of prediction
+
+    var labels = []
+
+    for (var datapoint of datapoints) {
+        var { x, y } = datapoint;
+
+        var input = new convnetjs.Vol(1, 1, 2, 0.0);
+        input.w[0] = x;
+        input.w[1] = y;
+
+        //Forward to get value of y
+        var output = this.network.forward(input);
+        var classLabel = output.w[0] >= output.w[1] ? 0 : 1;
+
+        //Return an object of shape { x: ..., y: ... }
+        labels.push(classLabel);
+    }
+
+    return labels;
+}
+
+LogisticRegressionModel.prototype.startFit = function() {
+    //Start fitting the model
+
+    //Define a training function
+    var model = this;
+
+    function train() {
+        //Train over all examples        
+        for (var i = 0; i != model.datapoints.length; ++i) {
+            //Create a volume and assign to it the value of x
+            var input = new convnetjs.Vol(1, 1, 2, 0.0);
+            input.w[0] = model.datapoints[i].x;
+            input.w[1] = model.datapoints[i].y;
+
+            //Train based on the value of y
+            model.trainer.train(input, model.datapoints[i].class);
+        }
+
+        //Call onFitIteration
+        model.onFitIteration();
+    }
+
+    //Use setInterval to train the network many loops
+    setInterval(train, 100);
+}
+
+LogisticRegressionModel.prototype.bindOnFitIteration = function(onFitIteration) {
+    //Bind the on fit iteration hook
+    this.onFitIteration = onFitIteration;
 }
 
 
@@ -63,6 +119,9 @@ function LogisticRegressionView(
     //Set configuration
     this.configuration = configuration;
 
+    //Control input
+    this.areButtonsDisabled = false;
+
     //Set current class
     // 0 is red
     // 1 is green
@@ -73,7 +132,6 @@ LogisticRegressionView.prototype.render = function() {
     //Render canvas and axes
     this.renderCanvas();
     this.renderAxes();
-    this.renderMask();
 }
 
 LogisticRegressionView.prototype.renderCanvas = function() {
@@ -104,20 +162,20 @@ LogisticRegressionView.prototype.renderAxes = function() {
 
     //Create x and y scale
     this.scaleX = d3.scaleLinear()
-        .domain([0, 10])
+        .domain([0, 1])
         .range([0, width]);
 
     this.invertScaleX = d3.scaleLinear()
         .domain([0, width])
-        .range([0, 10]);
+        .range([0, 1]);
 
     this.scaleY = d3.scaleLinear()
-        .domain([0, 10])
+        .domain([0, 1])
         .range([height, 0])
 
     this.invertScaleY = d3.scaleLinear()
         .domain([height, 0])
-        .range([0, 10])
+        .range([0, 1])
 
     //Draw the axes
     this.graph
@@ -153,10 +211,49 @@ LogisticRegressionView.prototype.clearDatapoints = function() {
         .remove();
 }
 
-LogisticRegressionView.prototype.renderMask = function() {
+LogisticRegressionView.prototype.renderMask = function(labels) {
     //Render a transparent that tells what class a single datapoint is
+    //labels is an array of output label
 
     //Get the width, height of graph, and the mask size from configuration
+    var margin = this.configuration.margin;
+    var width = this.configuration.width - margin * 2;
+    var height = this.configuration.height - margin * 2;
+    var mask = this.configuration.mask;
+
+    //Render a transparent mask by drawing rectangle with opacity
+    var currentLabelIndex = 0;
+
+    for (var r = 0; r < height / mask; ++r) {
+        for (var c = 0; c < width / mask; ++c) {
+            //Get the current position of the rectangle
+            var currentHeight = r * mask;
+            var currentWidth = c * mask;
+
+            //Get the label
+            var currentLabel = labels[currentLabelIndex];
+
+            //Draw a rectangle
+            this.graph.append("rect")
+                .attr("x", currentWidth)
+                .attr("y", currentHeight)
+                .attr("width", mask)
+                .attr("height", mask)
+                .attr("stroke", "transparent")
+                .attr("fill", currentLabel === 0 ? "#EF233C" : "#70E000")
+                .style("opacity", 0.25);
+
+            //Move on to next label
+            currentLabelIndex += 1;
+        }
+    }
+}
+
+LogisticRegressionView.prototype.getMaskCoordinates = function() {
+    //Get the coordinates of starting position on mask tiles
+    //coordinates is an array of shape [{ x:..., y:... }]
+    var coordinates = [];
+
     var margin = this.configuration.margin;
     var width = this.configuration.width - margin * 2;
     var height = this.configuration.height - margin * 2;
@@ -166,20 +263,26 @@ LogisticRegressionView.prototype.renderMask = function() {
     for (var r = 0; r < height / mask; ++r) {
         for (var c = 0; c < width / mask; ++c) {
             //Get the current position of the rectangle
-            var currentHeight = r * mask;
-            var currentWidth = c * mask;
+            var currentHeight = this.invertScaleY(r * mask);
+            var currentWidth = this.invertScaleX(c * mask);
 
-            //Draw a rectangle
-            this.graph.append("rect")
-                .attr("x", currentWidth)
-                .attr("y", currentHeight)
-                .attr("width", mask)
-                .attr("height", mask)
-                .attr("stroke", "transparent")
-                .attr("fill", "#70E000")
-                .style("opacity", 0.25);
+            //Append to coordinate list
+            coordinates.push({
+                x: currentWidth,
+                y: currentHeight
+            })
         }
     }
+
+    return coordinates;
+}
+
+LogisticRegressionView.prototype.clearMask = function() {
+    //Clear the transparent mask from graph
+
+    //Remove all rectangles
+    this.graph.selectAll("rect")
+        .remove();
 }
 
 LogisticRegressionView.prototype.changeClass = function(classLabel) {
@@ -196,7 +299,7 @@ LogisticRegressionView.prototype.bindOnChangeClassToRed = function() {
     var view = this;
 
     d3.select(this.redButton)
-        .on("click", function(event) {  
+        .on("click", function() {  
             view.changeClass(0) //Change class to 0 - Red
         });
 }
@@ -208,7 +311,7 @@ LogisticRegressionView.prototype.bindOnChangeClassToGreen = function() {
     var view = this;
 
     d3.select(this.greenButton)
-        .on("click", function(event) {
+        .on("click", function() {
             view.changeClass(1) //Change class to 1 - Green
         });
 }
@@ -258,12 +361,55 @@ LogisticRegressionView.prototype.bindOnClearDatapoints = function(onClearDatapoi
 
     d3.select(this.clearButton)
         .on("click", function() {
-            //Call clear datapoints on view
-            view.clearDatapoints();
-            onClearDatapoints();
+            //Excute if the fitting process has not begun
+            if (!view.areButtonsDisabled) {
+                //Call clear datapoints on view
+                view.clearDatapoints();
+                onClearDatapoints();
+            }
         });
 }
 
+LogisticRegressionView.prototype.bindOnStartFit = function(onStartFit) {
+    //Bind on start fit hook
+
+    //Set the view to this
+    var view = this;
+
+    d3.select(this.trainButton)
+        .on("click", function() {
+            //Execute only if the fitting process has not begun
+            if (!view.areButtonsDisabled) {
+                onStartFit();
+            }
+        });
+}
+
+LogisticRegressionView.prototype.disableButtons = function() {
+    //Disable inputs when training
+    this.areButtonsDisabled = true;
+
+    //Disable buttons by adding disable button class
+    d3.select(this.clearButton)
+        .node()
+        .classList
+        .add("button--disabled");
+
+    d3.select(this.trainButton)
+        .node()
+        .classList
+        .add("button--disabled");
+
+    d3.select(this.redButton)
+        .node()
+        .classList
+        .add("button--disabled");
+
+    d3.select(this.greenButton)
+        .node()
+        .classList
+        .add("button--disabled");  
+}
 
 //Logistic regression controller
 function LogisticRegressionController(model, view) {
@@ -274,24 +420,46 @@ function LogisticRegressionController(model, view) {
     //Render the view
     this.view.render();
 
+    //Bind the model
+    this.model.bindOnFitIteration(this.handleFitIteration.bind(this));
+
     //Bind the view
     this.view.bindOnChangeClassToRed();
     this.view.bindOnChangeClassToGreen();
     this.view.bindOnAddDatapoint(this.handleAddDatapoint.bind(this));
     this.view.bindOnClearDatapoints(this.handleClearDatapoints.bind(this));
+    this.view.bindOnStartFit(this.handleStartFit.bind(this));
 }
 
 LogisticRegressionController.prototype.handleAddDatapoint = function(datapoint) {
     //Handle adding datapoint - Triggered when the view's canvas is clicked
     //datapoint is an object of shape { x:..., y:..., class:... }
-
     this.model.onAddDatapoint(datapoint);
 }
 
 LogisticRegressionController.prototype.handleClearDatapoints = function() {
     //Handle clear datapoints
-
     this.model.clearDatapoints();
+}
+
+LogisticRegressionController.prototype.handleStartFit = function() {
+    //Handle on start fit
+    this.model.startFit();
+
+    //Disable inputs from view
+    this.view.disableButtons();
+}
+
+LogisticRegressionController.prototype.handleFitIteration = function() {
+    //Handle each iteration
+
+    //Get the prediction of datapoints
+    var inputs = this.view.getMaskCoordinates();
+    var labels = this.model.predict(inputs);
+
+    //Draw the mask according to the labels
+    this.view.clearMask();
+    this.view.renderMask(labels);
 }
 
 //Configuration and app
@@ -299,7 +467,7 @@ var configuration = {
     width: 600,
     height: 600,
     margin: 50,
-    mask: 25
+    mask: 10
 }
 Object.freeze(configuration);
 
@@ -314,6 +482,8 @@ var app = (function() {
         configuration
     );
     var controller = new LogisticRegressionController(model, view);
+
+    console.log(view.getMaskCoordinates());
 
     return {
         //Methods for app
