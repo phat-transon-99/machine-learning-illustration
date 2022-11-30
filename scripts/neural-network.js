@@ -150,6 +150,9 @@ NeuralNetworkModel.prototype.startFit = function() {
     var model = this;
 
     function train() {
+        //Initialize the average training cost
+        var cost = 0;
+
         //Train over all examples        
         for (var i = 0; i != model.datapoints.length; ++i) {
             //Create a volume and assign to it the value of x
@@ -158,11 +161,15 @@ NeuralNetworkModel.prototype.startFit = function() {
             input.w[1] = model.datapoints[i].y;
 
             //Train based on the value of y
-            model.configuration.trainer.train(input, model.datapoints[i].class);
+            //stats has the training result, including the cost
+            var stats = model.configuration.trainer.train(input, model.datapoints[i].class);
+
+            //Add to the training cost
+            cost += stats.loss;
         }
 
-        //Call onFitIteration
-        model.onFitIteration();
+        //Call onFitIteration on the current average training cost
+        model.onFitIteration(cost / model.datapoints.length);
     }
 
     //Use setInterval to train the network many loops
@@ -171,6 +178,7 @@ NeuralNetworkModel.prototype.startFit = function() {
 
 NeuralNetworkModel.prototype.bindOnFitIteration = function(onFitIteration) {
     //Bind the on fit iteration hook
+    //onFitIteration is a function of type function(cost)
     this.onFitIteration = onFitIteration;
 }
 
@@ -215,6 +223,7 @@ NeuralNetworkView.prototype.render = function() {
     //Render canvas and axes
     this.renderCanvas();
     this.renderAxes();
+    this.renderScore();
 }
 
 NeuralNetworkView.prototype.renderCanvas = function() {
@@ -554,6 +563,25 @@ NeuralNetworkView.prototype.disableButtons = function() {
         .add("button--disabled");
 }
 
+NeuralNetworkView.prototype.renderScore = function(score = 0) {
+    //Render score onto the graph
+    //Score is a floating point number
+    this.text = d3.select(this.root)
+        .select("svg")
+        .append("g");
+
+    this.text.append("text")
+            .attr("class", "score-text")
+            .attr("x", 180)
+            .attr("y", 25)
+            .text(`Current score: ${score}`);
+}
+
+NeuralNetworkView.prototype.clearScore = function() {
+    //Clear the current score from graph
+    this.text.remove();
+}
+
 //Logistic regression controller
 function NeuralNetworkController(model, view) {
     //Set model and view
@@ -596,7 +624,7 @@ NeuralNetworkController.prototype.handleStartFit = function() {
     this.view.disableButtons();
 }
 
-NeuralNetworkController.prototype.handleFitIteration = function() {
+NeuralNetworkController.prototype.handleFitIteration = function(cost) {
     //Handle each iteration
 
     //Get the prediction of datapoints
@@ -606,6 +634,10 @@ NeuralNetworkController.prototype.handleFitIteration = function() {
     //Draw the mask according to the labels
     this.view.clearMask();
     this.view.renderMask(labels);
+
+    //Render the cost
+    this.view.clearScore();
+    this.view.renderScore(cost);
 }
 
 NeuralNetworkController.prototype.handleOneLayerNetworkChosen = function() {
