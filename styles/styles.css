@@ -115,6 +115,20 @@ main {
     padding: 0 2rem;
 }
 
+@media screen and (max-width: 480px) {
+    header {
+        margin-bottom: 3rem;
+    }
+
+    main {
+        display: block;
+    }
+
+    .main-content {
+        padding: 0rem;
+    }
+}
+
 /* Side navigation */
 .side-nav {
     font-size: 1.5rem;

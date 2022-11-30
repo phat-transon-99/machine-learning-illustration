@@ -5,14 +5,16 @@
     grid-template-columns: 3fr 2fr;
 }
 
-.graph__canvas {
-    
-}
-
-.graph__buttons {
-    
-}
-
 .graph__button {
     margin-bottom: 1rem;
+}
+
+@media screen and (max-width: 480px) {
+    .graph {
+        display: block;
+    }
+
+    .graph__canvas {
+        margin-bottom: 1rem;
+    }
 }
